@@ -5,6 +5,7 @@ from base64 import b64decode
 
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
 
 # password to derive the key from
 PASSWORD = b'fubvx788b46v'
@@ -43,7 +44,7 @@ if len(split_base64_contents) != 3:
 split_contents = list(map(b64decode, split_base64_contents))
 
 # derive the key
-decryption_key = PBKDF2(PASSWORD, split_contents[0])
+decryption_key = PBKDF2(PASSWORD, split_contents[0], hmac_hash_module=SHA256)
 
 # decrypt the file
 decrypted_contents = AES.new(decryption_key, AES.MODE_GCM, nonce=split_contents[1]).decrypt(split_contents[2])
