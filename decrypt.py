@@ -1,52 +1,86 @@
 from argparse import ArgumentParser
-from sys import stderr, stdout
+from sys import stdin, stdout, stderr
+from pathlib import Path
 
 from base64 import b64decode
 
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
+from Crypto.Util.Padding import unpad
 
 # password to derive the key from
 PASSWORD = b'fubvx788b46v'
 
 # some utility functions
 def error(error_msg = 'Corrupted/unsupported file.'):
-    stderr.write(f'\033[41m\033[30m ERROR \033[0m {error_msg}\n')
+    stderr.write(f'\033[41m\033[30m ! \033[0m {error_msg}\n')
     stderr.flush()
 
     exit(1)
 
-# parse arguments
-parser = ArgumentParser()
-parser.add_argument('file', help='file to decrypt')
+def ask(prompt):
+    stderr.write(f'\033[104m\033[30m ? \033[0m {prompt} ')
+    stderr.flush()
 
-output_args = parser.add_mutually_exclusive_group()
-output_args.add_argument('--output', '-o', help='file to output to')
-output_args.add_argument('--stdin', '-O', action='store_true', help='output to stdout')
+    return input()
 
-args = parser.parse_args()
+def human_bool_to_bool(human_bool):
+    return 'y' in human_bool
 
-# open file
-encrypted_contents = ''
+def main():
+    # parse arguments
+    parser = ArgumentParser()
+    parser.add_argument('file', help='file to decrypt')
 
-try:
+    output_args = parser.add_mutually_exclusive_group()
+    output_args.add_argument('--output', '-o', help='file to output to')
+    output_args.add_argument('--stdout', '-O', action='store_true', help='output to stdout', default=True)
+
+    args = parser.parse_args()
+
+    # open file
     encrypted_contents = open(args.file, 'r').read()
-except FileNotFoundError:
-    error(f'File "{args.file}" was not found.')
 
-# split the file
-split_base64_contents = encrypted_contents.split('.')
+    # split the file
+    split_base64_contents = encrypted_contents.split('.')
 
-if len(split_base64_contents) != 3:
-    error()
+    if len(split_base64_contents) != 3:
+        raise ValueError('Unsupported file.')
 
-split_contents = list(map(b64decode, split_base64_contents))
+    split_contents = list(map(b64decode, split_base64_contents))
 
-# derive the key
-decryption_key = PBKDF2(PASSWORD, split_contents[0], hmac_hash_module=SHA256)
+    # derive the key
+    decryption_key = PBKDF2(PASSWORD, split_contents[0], hmac_hash_module=SHA256)
 
-# decrypt the file
-decrypted_contents = AES.new(decryption_key, AES.MODE_GCM, nonce=split_contents[1]).decrypt(split_contents[2])
+    # decrypt the file
+    cipher = AES.new(decryption_key, AES.MODE_GCM, nonce=split_contents[1])
+    decrypted_contents = cipher.decrypt_and_verify(split_contents[2][:-16], split_contents[2][-16:])
 
-print(decrypted_contents)
+    # decide where to write contents
+    if args.output:
+        output_file_path = Path(args.output)
+
+        # check if the file exists
+        if output_file_path.exists() and output_file_path.is_file():
+            # check if the user agrees to overwrite it
+            if not human_bool_to_bool(ask(f'A file named "{args.output}" already exists. Overwrite it? (y/n)')):
+                # if user doesn't, quit
+                exit(0)
+        
+        # write the contents to the file
+        output_file = open(output_file_path, 'wb')
+        output_file.write(decrypted_contents)
+    elif args.stdout:
+        # convert the config to UTF-8
+        config = decrypted_contents.decode('utf-8')
+
+        # write it to stdout
+        stdout.write(config)
+        stdout.flush()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as err:
+        error(err)
