@@ -1,8 +1,8 @@
 # tutdecryptor
 
-Decryptor for [TunnelTweak](https://play.google.com/store/apps/details?id=com.tunneltweak.loyalteams) configuration files.
+Decryptor for [TunnelTweak](https://play.google.com/store/apps/details?id=com.tunneltweak.loyalteams) and TunnelMate configuration files.
 
-Easily decrypt files with `.tut` extension!
+Easily decrypt files with `.tut` and `.tmt` extension!
 
 ## Installation
 
