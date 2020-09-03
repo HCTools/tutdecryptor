@@ -33,6 +33,7 @@ DEFAULT_FILE_EXTENSION = '.tmt'
 # passwords to derive the key from
 PASSWORDS = {
     '.tut': b'fubvx788b46v',
+    '.sks': b'dyv35224nossas!!',
     '.tmt': b'fubvx788B4mev',
 }
 
