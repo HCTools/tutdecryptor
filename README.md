@@ -15,8 +15,8 @@ Simply do:
 
 ## Usage
 
-Place your encrypted `.tut` file(s) in the same directory as `decrypt.py`, then do:
+Place your encrypted `.tut` or `.tmt` file(s) in the same directory as `decrypt.py`, then do:
 
-    python3 decrypt.py <filename>.tut
+    python3 decrypt.py <file>
 
 ...and let the magic happen!
