@@ -16,8 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-from argparse import ArgumentParser
 from sys import stdin, stdout, stderr
+
+from argparse import ArgumentParser
 from pathlib import Path
 
 from base64 import b64decode
@@ -27,15 +28,24 @@ from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
 from Crypto.Util.Padding import unpad
 
-# password to derive the key from
-PASSWORD = b'fubvx788b46v'
+DEFAULT_FILE_EXTENSION = '.tmt'
+
+# passwords to derive the key from
+PASSWORDS = {
+    '.tut': b'fubvx788b46v',
+    '.tmt': b'fubvx788B4mev',
+}
 
 # some utility functions
 def error(error_msg = 'Corrupted/unsupported file.'):
-    stderr.write(f'\033[41m\033[30m ! \033[0m {error_msg}\n')
+    stderr.write(f'\033[41m\033[30m X \033[0m {error_msg}\n')
     stderr.flush()
 
     exit(1)
+
+def warn(warn_msg):
+    stderr.write(f'\033[43m\033[30m ! \033[0m {warn_msg}\n')
+    stderr.flush()
 
 def ask(prompt):
     stderr.write(f'\033[104m\033[30m ? \033[0m {prompt} ')
@@ -60,6 +70,13 @@ def main():
     # open file
     encrypted_contents = open(args.file, 'r').read()
 
+    # determine the file's extension
+    file_ext = Path(args.file).suffix
+    
+    if file_ext not in PASSWORDS:
+        warn(f'Unknown file extension, defaulting to {DEFAULT_FILE_EXTENSION}')
+        file_ext = DEFAULT_FILE_EXTENSION
+
     # split the file
     split_base64_contents = encrypted_contents.split('.')
 
@@ -69,7 +86,7 @@ def main():
     split_contents = list(map(b64decode, split_base64_contents))
 
     # derive the key
-    decryption_key = PBKDF2(PASSWORD, split_contents[0], hmac_hash_module=SHA256)
+    decryption_key = PBKDF2(PASSWORDS[file_ext], split_contents[0], hmac_hash_module=SHA256)
 
     # decrypt the file
     cipher = AES.new(decryption_key, AES.MODE_GCM, nonce=split_contents[1])
